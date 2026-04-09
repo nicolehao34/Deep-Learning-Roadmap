@@ -306,17 +306,15 @@ interface CategoryGroup {
 }
 
 export default function RoadmapPage() {
-  const [completedItems, setCompletedItems] = useState<Set<string>>(new Set())
-  const [showSidebar, setShowSidebar] = useState(true)
-  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
-
-  // Load from localStorage on mount
-  useEffect(() => {
+  const [completedItems, setCompletedItems] = useState<Set<string>>(() => {
     try {
       const saved = localStorage.getItem('dl-roadmap-completed')
-      if (saved) setCompletedItems(new Set(JSON.parse(saved) as string[]))
+      if (saved) return new Set(JSON.parse(saved) as string[])
     } catch { /* ignore */ }
-  }, [])
+    return new Set()
+  })
+  const [showSidebar, setShowSidebar] = useState(true)
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set())
 
   // Persist to localStorage on change
   useEffect(() => {
