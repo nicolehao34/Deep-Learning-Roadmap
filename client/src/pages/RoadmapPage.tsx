@@ -241,6 +241,7 @@ export default function RoadmapPage() {
         </Panel>
       </ReactFlow>
       </div>
+      </div>
     </div>
   )
 }
