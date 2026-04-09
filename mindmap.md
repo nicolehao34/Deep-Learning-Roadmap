@@ -1,4 +1,4 @@
-# Deep Learning Roadmap
+# InkSight's Deep Learning Roadmap
 
 ## Fundamentals
 - Linear Algebra
