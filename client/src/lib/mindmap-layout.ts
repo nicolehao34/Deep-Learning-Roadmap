@@ -1,4 +1,4 @@
-import { Handle, Position, type Node, type Edge, MarkerType } from 'reactflow'
+import { Handle, Position, type Node, type Edge } from 'reactflow'
 import { CheckCircle2, Circle } from 'lucide-react'
 import React from 'react'
 
