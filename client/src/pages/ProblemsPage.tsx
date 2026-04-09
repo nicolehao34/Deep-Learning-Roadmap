@@ -281,9 +281,10 @@ export default function ProblemsPage() {
     return map
   }, [])
 
-  const rootNode = useMemo(() => mindMapNodes.find((n) => n.parentId === null)!, [])
+  const rootNode = useMemo(() => mindMapNodes.find((n) => n.parentId === null), [])
 
   const categoryGroups = useMemo(() => {
+    if (!rootNode) return []
     const l1Nodes = childrenMap.get(rootNode.id) ?? []
     return l1Nodes.map((l1, i) => {
       const descendants: typeof mindMapNodes = []
