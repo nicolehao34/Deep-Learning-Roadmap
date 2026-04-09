@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, NavLink } from 'react-router-do
 import { Brain } from 'lucide-react'
 import RoadmapPage from './pages/RoadmapPage'
 import ProblemsPage from './pages/ProblemsPage'
+import ProblemSolvingPage from './pages/ProblemSolvingPage'
 import './App.css'
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
         <Routes>
           <Route path="/" element={<RoadmapPage />} />
           <Route path="/problems" element={<ProblemsPage />} />
+          <Route path="/problems/:id" element={<ProblemSolvingPage />} />
         </Routes>
       </div>
     </Router>
