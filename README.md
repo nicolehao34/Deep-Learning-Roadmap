@@ -1,4 +1,4 @@
-# Deep Learning Roadmap 🧠
+# InkSight's Deep Learning Roadmap 🧠
 
 A comprehensive, interactive roadmap for learning all the key concepts in deep learning. This project provides both a traditional mind map visualization and a modern web application to track your learning journey.
 
