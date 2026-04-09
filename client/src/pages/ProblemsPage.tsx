@@ -1,4 +1,5 @@
 import { useCallback, useState, useMemo, useEffect } from 'react'
+import { Link } from 'react-router-dom'
 import ReactFlow, { Background, useNodesState, useEdgesState } from 'reactflow'
 import 'reactflow/dist/style.css'
 import { mindMapNodes } from '@/data/mindmap-data'
@@ -111,9 +112,14 @@ function ProblemCard({
         </div>
       </div>
 
-      <h3 className={`font-semibold text-sm mb-1.5 ${solved ? 'text-gray-500' : 'text-gray-900'}`}>
+      <Link
+        to={`/problems/${problem.id}`}
+        className={`font-semibold text-sm mb-1.5 hover:underline block ${
+          solved ? 'text-gray-400' : 'text-gray-900 hover:text-blue-600'
+        }`}
+      >
         {problem.title}
-      </h3>
+      </Link>
       <p className={`text-xs leading-relaxed mb-3 ${solved ? 'text-gray-400' : 'text-gray-600'}`}>
         {problem.description}
       </p>
