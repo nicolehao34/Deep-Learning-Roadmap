@@ -1,4 +1,4 @@
-# Deep Learning Roadmap - Client
+# InkSight's Deep Learning Roadmap - Client
 
 Modern, interactive React application for exploring deep learning concepts.
 
