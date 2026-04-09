@@ -101,7 +101,12 @@ This roadmap is based on college coursework and continuous learning. Feel free t
 
 ## 📄 License
 
-This project is open source and available for educational purposes.
+This project is licensed under the GNU General Public License v3.0.
+See [LICENSE](LICENSE) for details.
+
+## 🔒 Privacy
+
+This repository does not collect personal data. See [PRIVACY.md](PRIVACY.md) for the project's privacy statement.
 
 ## 🌟 Acknowledgments
 
