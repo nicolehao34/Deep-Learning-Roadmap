@@ -394,9 +394,13 @@ export default function RoadmapPage() {
     })
   }, [childrenMap, rootNode])
 
-  const totalItems = mindMapNodes.length - 1
-  const completedCount = completedItems.size
-  const progress = totalItems > 0 ? Math.round((completedCount / totalItems) * 100) : 0
+  const allCompletableIds = useMemo(
+    () => new Set(categoryGroups.flatMap((g) => g.topics.map((t) => t.id))),
+    [categoryGroups]
+  )
+  const totalItems = allCompletableIds.size
+  const completedCount = [...completedItems].filter((id) => allCompletableIds.has(id)).length
+  const progress = totalItems > 0 ? Math.min(100, Math.round((completedCount / totalItems) * 100)) : 0
 
   return (
     <div className="flex w-full h-[calc(100vh-80px)]">
