@@ -53,6 +53,7 @@ const categoryColors: Record<string, string> = {
 interface CustomNodeData {
   label: string
   isCompleted: boolean
+  completionRatio: number  // 0–1; topics: 0 or 1; categories: fraction of subtree done
   onToggle: () => void
   category: string
   level: number
@@ -74,6 +75,7 @@ function RootNode({ data }: { data: CustomNodeData }) {
 function CategoryNode({ data }: { data: CustomNodeData }) {
   const color = categoryColors[data.category] ?? '#6b7280'
   const isLeft = data.side === 'left'
+  const ratio = data.completionRatio
   return (
     <>
       <Handle
@@ -83,7 +85,13 @@ function CategoryNode({ data }: { data: CustomNodeData }) {
       />
       <div
         className="px-4 py-1.5 rounded-full font-bold text-sm text-white shadow-md select-none min-w-[100px] text-center"
-        style={{ backgroundColor: color }}
+        style={{
+          backgroundColor: color,
+          filter: `grayscale(${(1 - ratio) * 100}%)`,
+          opacity: 0.3 + ratio * 0.7,
+          boxShadow: ratio > 0 ? `0 0 ${Math.round(ratio * 14)}px ${color}55` : undefined,
+          transition: 'filter 0.7s ease, opacity 0.7s ease, box-shadow 0.7s ease',
+        }}
       >
         {data.label}
       </div>
@@ -108,9 +116,15 @@ function TopicNode({ data }: { data: CustomNodeData }) {
         style={{ opacity: 0 }}
       />
       <div
-        className={`px-2.5 py-1 rounded-md border text-xs shadow-sm max-w-[180px] transition-all ${
-          done ? 'bg-green-50 border-green-200' : 'bg-white border-gray-100'
-        }`}
+        className="px-2.5 py-1 rounded-md border text-xs max-w-[180px]"
+        style={{
+          borderColor: done ? color : '#e5e7eb',
+          backgroundColor: done ? `${color}12` : '#f8fafc',
+          filter: done ? 'grayscale(0%)' : 'grayscale(100%)',
+          opacity: done ? 1 : 0.45,
+          boxShadow: done ? `0 0 8px ${color}35` : '0 1px 2px rgba(0,0,0,0.04)',
+          transition: 'filter 0.6s ease, opacity 0.6s ease, box-shadow 0.6s ease, border-color 0.5s ease, background-color 0.5s ease',
+        }}
       >
         <div className={`flex items-center gap-1.5 ${isLeft ? 'flex-row-reverse' : ''}`}>
           <button
@@ -118,14 +132,14 @@ function TopicNode({ data }: { data: CustomNodeData }) {
             className="flex-shrink-0 transition-transform hover:scale-110"
           >
             {done ? (
-              <CheckCircle2 className="w-3.5 h-3.5 text-green-500" />
+              <CheckCircle2 className="w-3.5 h-3.5" style={{ color }} />
             ) : (
-              <Circle className="w-3.5 h-3.5" style={{ color }} />
+              <Circle className="w-3.5 h-3.5 text-gray-300" />
             )}
           </button>
           <span
-            className={`leading-snug ${done ? 'line-through text-gray-400' : 'text-gray-700'} ${
-              isLeft ? 'text-right' : 'text-left'
+            className={`leading-snug ${isLeft ? 'text-right' : 'text-left'} ${
+              done ? 'font-medium text-gray-800' : 'text-gray-400'
             }`}
           >
             {data.label}
@@ -264,7 +278,7 @@ function buildMindMapLayout(rawNodes: MindMapNode[]): {
       id: node.id,
       type,
       position: { x: pos.x, y: pos.y },
-      data: { label: node.name, isCompleted: false, onToggle: () => {}, category, level: pos.level, side },
+      data: { label: node.name, isCompleted: false, completionRatio: 0, onToggle: () => {}, category, level: pos.level, side },
     })
   })
 
@@ -284,7 +298,8 @@ function buildMindMapLayout(rawNodes: MindMapNode[]): {
       target: node.id,
       type: 'default',
       animated: false,
-      style: { stroke: color, strokeWidth },
+      data: { categoryColor: color },
+      style: { stroke: color, strokeWidth, opacity: 0.15, transition: 'opacity 0.6s ease' },
     }
     // For root's edges, specify which handle (left or right)
     if (level === 1) {
@@ -344,21 +359,7 @@ export default function RoadmapPage() {
   const [nodes, , onNodesChange] = useNodesState(initialNodes)
   const [edges, , onEdgesChange] = useEdgesState(initialEdges)
 
-  // Overlay completion state without recomputing layout
-  const updatedNodes = useMemo(
-    () =>
-      nodes.map((node) => ({
-        ...node,
-        data: {
-          ...node.data,
-          isCompleted: completedItems.has(node.id),
-          onToggle: () => toggleComplete(node.id),
-        },
-      })),
-    [nodes, completedItems, toggleComplete]
-  )
-
-  // Sidebar data
+  // Sidebar data — must come before updatedNodes so categoryGroups is available
   const childrenMap = useMemo(() => {
     const map = new Map<string, MindMapNode[]>()
     mindMapNodes.forEach((n) => {
@@ -391,6 +392,53 @@ export default function RoadmapPage() {
       }
     })
   }, [childrenMap, rootNode])
+
+  // Overlay completion state + compute per-category completion ratio
+  const updatedNodes = useMemo(() => {
+    const categoryRatios = new Map<string, number>()
+    for (const group of categoryGroups) {
+      const done = group.topics.filter((t) => completedItems.has(t.id)).length
+      categoryRatios.set(group.categoryId, group.topics.length > 0 ? done / group.topics.length : 0)
+    }
+    return nodes.map((node) => ({
+      ...node,
+      data: {
+        ...node.data,
+        isCompleted: completedItems.has(node.id),
+        completionRatio:
+          node.data.level === 1
+            ? (categoryRatios.get(node.id) ?? 0)
+            : completedItems.has(node.id) ? 1 : 0,
+        onToggle: () => toggleComplete(node.id),
+      },
+    }))
+  }, [nodes, completedItems, toggleComplete, categoryGroups])
+
+  // Dim inactive edges; light up edges whose target has any completion
+  const updatedEdges = useMemo(() => {
+    const activated = new Set<string>()
+    for (const group of categoryGroups) {
+      for (const topic of group.topics) {
+        if (completedItems.has(topic.id)) {
+          activated.add(topic.id)
+          activated.add(group.categoryId)
+        }
+      }
+    }
+    return edges.map((edge) => {
+      const isActive = activated.has(edge.target)
+      const color = (edge.data as { categoryColor?: string })?.categoryColor ?? '#94a3b8'
+      return {
+        ...edge,
+        style: {
+          ...edge.style,
+          stroke: color,
+          opacity: isActive ? 1 : 0.15,
+          transition: 'opacity 0.6s ease',
+        },
+      }
+    })
+  }, [edges, completedItems, categoryGroups])
 
   const allCompletableIds = useMemo(
     () => new Set(categoryGroups.flatMap((g) => g.topics.map((t) => t.id))),
@@ -495,7 +543,7 @@ export default function RoadmapPage() {
       <div className="flex-1 relative">
         <ReactFlow
           nodes={updatedNodes}
-          edges={edges}
+          edges={updatedEdges}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           nodeTypes={nodeTypes}
@@ -508,8 +556,9 @@ export default function RoadmapPage() {
           <Controls />
           <MiniMap
             nodeColor={(node) => {
-              if (node.data?.isCompleted) return '#10b981'
-              return categoryColors[node.data?.category ?? ''] ?? '#94a3b8'
+              if (node.data?.isCompleted) return categoryColors[node.data?.category ?? ''] ?? '#10b981'
+              if (node.data?.completionRatio > 0) return categoryColors[node.data?.category ?? ''] ?? '#94a3b8'
+              return '#d1d5db'
             }}
             maskColor="rgba(240, 240, 240, 0.6)"
           />
