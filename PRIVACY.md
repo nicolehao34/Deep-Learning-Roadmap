@@ -2,7 +2,7 @@
 
 Effective date: 2026-04-09
 
-This project ("Deep Learning Roadmap") is an open educational resource and is not operated as a hosted service.
+This project ("InkSight Deep Learning Roadmap") is an open educational resource and is not operated as a hosted service.
 
 - **No personal data collection by default**: This repository and the included static files do not collect or store personal data.
 - **Third-party services**: If you run the web application and enable optional third-party analytics or other services, those services may collect data according to their own policies. You (or the deployer) are responsible for configuring and disclosing such services when deploying the application.
