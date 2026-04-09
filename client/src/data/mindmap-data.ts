@@ -309,7 +309,6 @@ export const mindMapNodes: MindMapNode[] = [
   { id: "gMEnphVIJM71", name: "Introduces weight decay", parentId: "vo8mF9JfowCG" },
   
   // Regularization
-  { id: "n5YmXLaYY8WP", name: "Regularization Techniques", parentId: "yq1G2-Rxt0Qn" },
   { id: "A7Dn_kfy-C5D", name: "Weight Decay", parentId: "n5YmXLaYY8WP" },
   { id: "cbZmF-G6T.7O", name: "Dropout", parentId: "n5YmXLaYY8WP" },
   { id: "cC8mD-mO99Da", name: "Gradient Clipping", parentId: "n5YmXLaYY8WP" },
