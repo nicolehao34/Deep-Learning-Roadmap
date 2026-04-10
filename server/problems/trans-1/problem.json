@@ -1,0 +1,29 @@
+{
+  "id": "trans-1",
+  "title": "Implement Scaled Dot-Product Attention from Scratch",
+  "language": "python",
+  "timeout": 60,
+  "pointBreakdown": {
+    "Numerical Accuracy": 40,
+    "Masking": 30,
+    "Dropout": 15,
+    "Edge Cases": 15
+  },
+  "testPoints": {
+    "TestNumericalAccuracy::test_basic_accuracy_small": 10,
+    "TestNumericalAccuracy::test_basic_accuracy_large": 10,
+    "TestNumericalAccuracy::test_accuracy_different_dimensions": 10,
+    "TestNumericalAccuracy::test_accuracy_extreme_values": 10,
+    "TestMaskingAccuracy::test_causal_mask_accuracy": 10,
+    "TestMaskingAccuracy::test_padding_mask_accuracy": 10,
+    "TestMaskingAccuracy::test_combined_masks_accuracy": 10,
+    "TestDropoutImplementation::test_dropout_reproducibility": 5,
+    "TestDropoutImplementation::test_dropout_affects_output": 5,
+    "TestDropoutImplementation::test_dropout_zero_in_eval": 5,
+    "TestEdgeCases::test_single_token_sequence": 3,
+    "TestEdgeCases::test_very_long_sequence": 3,
+    "TestEdgeCases::test_fully_masked_row": 3,
+    "TestEdgeCases::test_minimal_dimensions": 3,
+    "TestEdgeCases::test_broadcasting_mask": 3
+  }
+}
