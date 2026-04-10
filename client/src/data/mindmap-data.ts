@@ -171,9 +171,15 @@ export const mindMapNodes: MindMapNode[] = [
   { id: "9eJnh9AiyIp9", name: "CLIP", parentId: "m.GnrMGoHhIJ" },
   { id: "qDInFEW3S4bb", name: "Single resolution limitation", parentId: "m.GnrMGoHhIJ" },
   { id: "RdJnrRADESkU", name: "Hierarchical ViT", parentId: "m.GnrMGoHhIJ" },
-  
+  { id: "vP.mK3xhT1qL", name: "Patch Embedding", parentId: "m.GnrMGoHhIJ" },
+
   { id: "seJnc5MnFOS7", name: "Minimal data augmentation", parentId: "RdJnrRADESkU" },
-  
+
+  { id: "sL.mR8nF2wQy", name: "SigLIP", parentId: "zb~mMhhBFpFZ" },
+  { id: "lV.mBnC7hEyz", name: "LLaVA", parentId: "zb~mMhhBFpFZ" },
+  { id: "sG.mN4kP9rXv", name: "Vision Projector", parentId: "lV.mBnC7hEyz" },
+  { id: "iT.mF6qR2mWz", name: "Image Token Inserter", parentId: "lV.mBnC7hEyz" },
+
   // VAE
   { id: "~vgnVSpa0YtU", name: "Latent Space", parentId: "Zc~m~4VyblsZ" },
   { id: "nVHni5zJ6Gdo", name: "Generator reconstructs input", parentId: "Zc~m~4VyblsZ" },

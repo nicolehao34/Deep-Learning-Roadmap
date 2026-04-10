@@ -272,8 +272,108 @@ export const problems: Problem[] = [
     tags: ['cross-attention', 'encoder-decoder', 'seq2seq'],
     unlocksNodeIds: ['BFInMmyl7G21', 'oFInQklGdUx-', 'Z4.m5HY7AjWk', 'Y5.m3r~K4qf3'],
   },
+  {
+    id: 'trans-6',
+    title: 'Causal Mask Construction',
+    description:
+      'Implement a causal (lower-triangular) attention mask from scratch. Build a function that generates a boolean mask of shape (T, T) where position i can only attend to positions ≤ i. Apply it inside scaled dot-product attention and verify that future tokens are correctly blocked by checking the post-softmax attention weights.',
+    difficulty: 'Easy',
+    categoryKey: 'transformers',
+    tags: ['causal-mask', 'autoregressive', 'attention', 'masking'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-7',
+    title: 'Numerically Stable Softmax',
+    description:
+      'Implement numerically stable softmax using the log-sum-exp trick: subtract the row maximum before exponentiation to prevent overflow. Show that the naive implementation produces NaN or Inf for large logits, while yours does not. Apply both versions to attention score matrices and compare outputs.',
+    difficulty: 'Easy',
+    categoryKey: 'transformers',
+    tags: ['softmax', 'numerical-stability', 'log-sum-exp', 'attention'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-8',
+    title: 'Multi-Query Attention (MQA)',
+    description:
+      'Implement Multi-Query Attention where all heads share a single set of keys and values but have independent query projections. Compare memory usage and throughput against standard Multi-Head Attention at inference time. Explain how MQA reduces the KV-cache size during autoregressive generation.',
+    difficulty: 'Medium',
+    categoryKey: 'transformers',
+    tags: ['mqa', 'kv-cache', 'inference', 'attention'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-9',
+    title: 'Grouped Query Attention (GQA)',
+    description:
+      'Implement Grouped Query Attention, which groups query heads so that each group shares one key/value head. Parameterise the number of KV groups G and verify that G=1 reproduces MQA and G=H reproduces MHA. Measure the trade-off between model quality and KV-cache memory as G varies.',
+    difficulty: 'Medium',
+    categoryKey: 'transformers',
+    tags: ['gqa', 'grouped-attention', 'kv-cache', 'llama'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-10',
+    title: 'Attention Residual Dropout',
+    description:
+      'Add dropout at two points in a transformer block: (1) to the attention weight matrix after softmax, and (2) to the output of each sub-layer before the residual addition. Train a small transformer with and without each dropout strategy and plot the validation loss curves to show regularisation effects.',
+    difficulty: 'Easy',
+    categoryKey: 'transformers',
+    tags: ['dropout', 'regularization', 'residual', 'transformer'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-11',
+    title: 'FlashAttention Compatibility Layer',
+    description:
+      'Implement the core IO-aware attention algorithm underlying FlashAttention: tile the Q, K, V matrices into blocks that fit in SRAM and compute attention incrementally using the online softmax update rule, never materialising the full N×N attention matrix. Verify numerical equivalence with standard attention and measure peak memory usage as sequence length scales.',
+    difficulty: 'Hard',
+    categoryKey: 'transformers',
+    tags: ['flash-attention', 'io-aware', 'memory-efficient', 'tiling'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-12',
+    title: 'Decoder-Only Transformer Block',
+    description:
+      'Build a single decoder-only transformer block: causal multi-head self-attention → residual + layer norm → position-wise feed-forward network → residual + layer norm. Stack multiple blocks into a language model, verify that the causal mask prevents information leakage, and count parameters.',
+    difficulty: 'Hard',
+    categoryKey: 'transformers',
+    tags: ['decoder-only', 'gpt', 'causal-attention', 'ffn'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-13',
+    title: 'Encoder-Decoder Transformer Block',
+    description:
+      'Build a complete encoder-decoder transformer block: the encoder side uses bidirectional self-attention; the decoder side uses causal self-attention followed by cross-attention over the encoder output. Implement both blocks, wire them together, and train on a toy translation or sequence transduction task.',
+    difficulty: 'Hard',
+    categoryKey: 'transformers',
+    tags: ['encoder-decoder', 'cross-attention', 'seq2seq', 'transformer'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-14',
+    title: 'RMSNorm Implementation',
+    description:
+      'Implement Root Mean Square Layer Normalization (RMSNorm) from scratch: normalise by the RMS of the activations (no mean subtraction) and apply a learned scale parameter. Compare it to standard LayerNorm on a transformer training run, showing that RMSNorm achieves similar stability with fewer operations.',
+    difficulty: 'Easy',
+    categoryKey: 'transformers',
+    tags: ['rmsnorm', 'layer-norm', 'normalization', 'llama'],
+    unlocksNodeIds: [],
+  },
+  {
+    id: 'trans-15',
+    title: 'Activation Checkpointing',
+    description:
+      'Implement gradient checkpointing (activation recomputation) for a multi-layer transformer: during the forward pass, discard intermediate activations and recompute them on demand during the backward pass. Measure peak GPU/CPU memory with and without checkpointing across varying model depths, and quantify the compute overhead introduced.',
+    difficulty: 'Hard',
+    categoryKey: 'transformers',
+    tags: ['checkpointing', 'memory-efficiency', 'gradient', 'training'],
+    unlocksNodeIds: [],
+  },
 
-  // ─── Vision Language Models ───────────────────────────────────────────────
+  // ─── Vision Language Models \ Multimodal ───────────────────────────────────────────────
   {
     id: 'vlm-1',
     title: 'Implement CLIP-Style Contrastive Loss from Scratch',
@@ -323,6 +423,56 @@ export const problems: Problem[] = [
     categoryKey: 'vision-language',
     tags: ['cyclegan', 'unpaired', 'cycle-consistency', 'image-translation'],
     unlocksNodeIds: ['Cqan_svwW.OT', 'tbany.mWfm3f', 'FnangFKyNv0n', 'LqanO0YZWJHA', 'KoanIGoiYyr6'],
+  },
+  {
+    id: 'vlm-6',
+    title: 'ViT Patch Embedding',
+    description:
+      'Implement just the patch embedding stage of a Vision Transformer from scratch: divide an image into fixed-size patches, flatten each patch, and project it to the model dimension with a learned linear layer. Add a learnable [CLS] token and 1D positional embeddings. Verify that the output shape matches (N, num_patches + 1, d_model) for a batch of images.',
+    difficulty: 'Medium',
+    categoryKey: 'vision-language',
+    tags: ['vit', 'patch-embedding', 'cls-token', 'positional-embedding'],
+    unlocksNodeIds: ['vP.mK3xhT1qL'],
+  },
+  {
+    id: 'vlm-7',
+    title: 'Vision Projector',
+    description:
+      'Implement the vision projector (also called the visual adapter or connector) used in multimodal LLMs: a learned MLP or linear layer that maps the output of a frozen vision encoder (e.g., CLIP ViT) into the token embedding space of a language model. Train the projector on image-caption pairs while keeping both the vision encoder and LLM frozen.',
+    difficulty: 'Medium',
+    categoryKey: 'vision-language',
+    tags: ['vision-projector', 'multimodal', 'llava', 'adapter'],
+    unlocksNodeIds: ['sG.mN4kP9rXv'],
+  },
+  {
+    id: 'vlm-8',
+    title: 'Image Token Inserter',
+    description:
+      'Implement the mechanism that splices visual tokens into a text token sequence for a multimodal language model. Given a sequence of image patch embeddings and a text token sequence with a placeholder image token, replace the placeholder with the patch embeddings and construct the combined attention mask. Verify that the LLM processes both modalities in a single forward pass.',
+    difficulty: 'Medium',
+    categoryKey: 'vision-language',
+    tags: ['image-tokens', 'multimodal', 'tokenization', 'llava'],
+    unlocksNodeIds: ['iT.mF6qR2mWz'],
+  },
+  {
+    id: 'vlm-9',
+    title: 'SigLIP Similarity Loss',
+    description:
+      'Implement the SigLIP (Sigmoid Loss for Language-Image Pre-training) objective: replace CLIP\'s softmax-based contrastive loss with a pairwise sigmoid loss that treats each (image, text) pair independently. Show that this removes the dependency on large batch sizes and compare convergence speed and final linear probe accuracy against standard CLIP loss on a small image-caption dataset.',
+    difficulty: 'Hard',
+    categoryKey: 'vision-language',
+    tags: ['siglip', 'sigmoid-loss', 'vision-language', 'contrastive'],
+    unlocksNodeIds: ['sL.mR8nF2wQy'],
+  },
+  {
+    id: 'vlm-10',
+    title: 'LLaVA Fusion',
+    description:
+      'Build a minimal LLaVA-style multimodal model end-to-end: connect a CLIP ViT vision encoder to a small language model through a two-layer MLP vision projector. Implement the image-token insertion logic, then fine-tune only the projector on a visual question-answering dataset. Evaluate on held-out VQA pairs and compare against a text-only baseline.',
+    difficulty: 'Hard',
+    categoryKey: 'vision-language',
+    tags: ['llava', 'multimodal', 'vision-projector', 'vqa', 'fine-tuning'],
+    unlocksNodeIds: ['lV.mBnC7hEyz'],
   },
 
   // ─── Self-supervised Learning ─────────────────────────────────────────────
