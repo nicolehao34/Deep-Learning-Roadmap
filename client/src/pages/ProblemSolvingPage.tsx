@@ -271,7 +271,7 @@ function OutputPanel({
             </span>
           )}
         </div>
-        <button onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
+        <button aria-label="Close output" onClick={onClose} className="text-gray-500 hover:text-gray-300 transition-colors">
           <X className="w-3.5 h-3.5" />
         </button>
       </div>
