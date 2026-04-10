@@ -21,11 +21,22 @@ def _problem_dir(problem_id: str) -> Path:
     return PROBLEMS_DIR / problem_id
 
 
-def problem_exists(problem_id: str) -> bool:
+def public_tests_exist(problem_id: str) -> bool:
     d = _problem_dir(problem_id)
-    return (d / "public_tests.py").exists() and (d / "eval_script.py").exists()
+    return (d / "public_tests.py").exists()
 
 
+def private_eval_exists(problem_id: str) -> bool:
+    d = _problem_dir(problem_id)
+    return (d / "eval_script.py").exists()
+
+
+def problem_exists(problem_id: str, mode: Literal["run", "submit", "all"] = "all") -> bool:
+    if mode == "run":
+        return public_tests_exist(problem_id)
+    if mode == "submit":
+        return public_tests_exist(problem_id) and private_eval_exists(problem_id)
+    return public_tests_exist(problem_id) and private_eval_exists(problem_id)
 def _load_problem_meta(problem_id: str) -> dict:
     meta_path = _problem_dir(problem_id) / "problem.json"
     with open(meta_path) as f:
