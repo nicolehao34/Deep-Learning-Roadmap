@@ -14,7 +14,7 @@ function App() {
             <div className="flex items-center justify-between h-[80px]">
               <NavLink to="/" className="flex items-center gap-2 text-2xl font-bold text-slate-900 dark:text-white">
                 <Brain className="w-8 h-8 text-blue-600" />
-                <span> InkSight's Deep Learning Roadmap</span>
+                <span>InkSight's Deep Learning Roadmap</span>
               </NavLink>
               <div className="flex items-center gap-1">
                 <NavLink
