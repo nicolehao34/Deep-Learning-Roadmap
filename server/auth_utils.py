@@ -78,14 +78,18 @@ async def get_optional_user(
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_scheme),
     session: Session = Depends(get_session),
 ) -> Optional[User]:
-    """Like get_current_user but returns None instead of raising 401."""
+    """Like get_current_user, but returns None only when no credentials are provided."""
     if not credentials:
         return None
     try:
         payload = decode_token(credentials.credentials)
         if payload.get("type") != "access":
-            return None
+            raise _credentials_exception("Invalid token type")
         user_id: str = payload["sub"]
-        return session.get(User, user_id)
     except JWTError:
-        return None
+        raise _credentials_exception()
+
+    user = session.get(User, user_id)
+    if user is None:
+        raise _credentials_exception("User not found")
+    return user
