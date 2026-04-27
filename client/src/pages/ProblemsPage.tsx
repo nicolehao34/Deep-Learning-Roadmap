@@ -20,6 +20,7 @@ import {
   ListChecks,
   X,
 } from 'lucide-react'
+import { useAuth } from '@/contexts/AuthContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -161,20 +162,19 @@ const CATEGORY_LABELS: Record<string, string> = {
 const { nodes: initialNodes, edges: initialEdges } = buildMindMapLayout(mindMapNodes)
 
 export default function ProblemsPage() {
-  // ── Solved problems ──────────────────────────────────────────────────────
-  const [solvedProblems, setSolvedProblems] = useState<Set<string>>(() => {
-    try {
-      const saved = localStorage.getItem('dl-solved-problems')
-      if (saved) return new Set(JSON.parse(saved) as string[])
-    } catch { /* ignore */ }
-    return new Set()
-  })
+  const { authFetch } = useAuth()
+
+  // ── Solved problems (server-backed) ─────────────────────────────────────
+  const [solvedProblems, setSolvedProblems] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    localStorage.setItem('dl-solved-problems', JSON.stringify([...solvedProblems]))
-  }, [solvedProblems])
+    authFetch('/api/users/me/solved')
+      .then(r => r.ok ? r.json() : [])
+      .then((ids: string[]) => setSolvedProblems(new Set(ids)))
+      .catch(() => {})
+  }, [authFetch])
 
-  // ── Completed mindmap nodes (derived + synced) ───────────────────────────
+  // ── Completed mindmap nodes (derived) ────────────────────────────────────
   const completedItems = useMemo<Set<string>>(() => {
     const ids = new Set<string>()
     for (const p of problems) {
@@ -185,25 +185,19 @@ export default function ProblemsPage() {
     return ids
   }, [solvedProblems])
 
-  useEffect(() => {
-    localStorage.setItem('dl-roadmap-completed', JSON.stringify([...completedItems]))
-  }, [completedItems])
-
   // ── Tab ──────────────────────────────────────────────────────────────────
   const [activeTab, setActiveTab] = useState(CATEGORY_KEYS[0])
 
-  // ── My Lists ─────────────────────────────────────────────────────────────
-  const [myLists, setMyLists] = useState<ProblemList[]>(() => {
-    try {
-      const saved = localStorage.getItem('dl-problem-lists')
-      if (saved) return JSON.parse(saved) as ProblemList[]
-    } catch { /* ignore */ }
-    return []
-  })
+  // ── My Lists (server-backed) ─────────────────────────────────────────────
+  const [myLists, setMyLists] = useState<ProblemList[]>([])
 
   useEffect(() => {
-    localStorage.setItem('dl-problem-lists', JSON.stringify(myLists))
-  }, [myLists])
+    authFetch('/api/users/me/lists')
+      .then(r => r.ok ? r.json() : [])
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .then((rows: any[]) => setMyLists(rows.map(r => ({ id: r.id, name: r.name, problemIds: r.items ?? [] }))))
+      .catch(() => {})
+  }, [authFetch])
 
   const [sidebarView, setSidebarView] = useState<'library' | 'my-list'>('library')
   const [selectedListId, setSelectedListId] = useState<string | null>(null)
@@ -211,37 +205,58 @@ export default function ProblemsPage() {
   const [addingList, setAddingList] = useState(false)
   const [newListName, setNewListName] = useState('')
 
-  const addList = useCallback(() => {
+  const addList = useCallback(async () => {
     const name = newListName.trim()
     if (!name) return
-    const newList: ProblemList = { id: `list-${Date.now()}`, name, problemIds: [] }
-    setMyLists((prev) => [...prev, newList])
     setNewListName('')
     setAddingList(false)
-  }, [newListName])
+    try {
+      const res = await authFetch('/api/users/me/lists', {
+        method: 'POST',
+        body: JSON.stringify({ name }),
+      })
+      if (res.ok) {
+        const created = await res.json()
+        setMyLists(prev => [...prev, { id: created.id, name: created.name, problemIds: [] }])
+      }
+    } catch {}
+  }, [newListName, authFetch])
 
-  const addToList = useCallback((listId: string, problemId: string) => {
-    setMyLists((prev) =>
-      prev.map((l) =>
+  const addToList = useCallback(async (listId: string, problemId: string) => {
+    // Optimistic
+    setMyLists(prev =>
+      prev.map(l =>
         l.id === listId && !l.problemIds.includes(problemId)
           ? { ...l, problemIds: [...l.problemIds, problemId] }
           : l
       )
     )
-  }, [])
+    try {
+      await authFetch(`/api/users/me/lists/${listId}/items`, {
+        method: 'POST',
+        body: JSON.stringify({ problem_id: problemId }),
+      })
+    } catch {}
+  }, [authFetch])
 
-  const removeFromList = useCallback((listId: string, problemId: string) => {
-    setMyLists((prev) =>
-      prev.map((l) =>
-        l.id === listId ? { ...l, problemIds: l.problemIds.filter((id) => id !== problemId) } : l
+  const removeFromList = useCallback(async (listId: string, problemId: string) => {
+    setMyLists(prev =>
+      prev.map(l =>
+        l.id === listId ? { ...l, problemIds: l.problemIds.filter(id => id !== problemId) } : l
       )
     )
-  }, [])
+    try {
+      await authFetch(`/api/users/me/lists/${listId}/items/${problemId}`, { method: 'DELETE' })
+    } catch {}
+  }, [authFetch])
 
-  const deleteList = useCallback((listId: string) => {
-    setMyLists((prev) => prev.filter((l) => l.id !== listId))
+  const deleteList = useCallback(async (listId: string) => {
+    setMyLists(prev => prev.filter(l => l.id !== listId))
     if (selectedListId === listId) setSelectedListId(null)
-  }, [selectedListId])
+    try {
+      await authFetch(`/api/users/me/lists/${listId}`, { method: 'DELETE' })
+    } catch {}
+  }, [selectedListId, authFetch])
 
   const toggleListCollapse = useCallback((listId: string) => {
     setCollapsedLists((prev) => {
@@ -251,13 +266,28 @@ export default function ProblemsPage() {
     })
   }, [])
 
-  const toggleSolved = useCallback((problemId: string) => {
-    setSolvedProblems((prev) => {
+  const toggleSolved = useCallback(async (problemId: string) => {
+    const wasSolved = solvedProblems.has(problemId)
+    // Optimistic update
+    setSolvedProblems(prev => {
       const next = new Set(prev)
-      next.has(problemId) ? next.delete(problemId) : next.add(problemId)
+      wasSolved ? next.delete(problemId) : next.add(problemId)
       return next
     })
-  }, [])
+    try {
+      await authFetch(
+        `/api/users/me/solved/${problemId}`,
+        { method: wasSolved ? 'DELETE' : 'POST' }
+      )
+    } catch {
+      // Rollback on error
+      setSolvedProblems(prev => {
+        const next = new Set(prev)
+        wasSolved ? next.add(problemId) : next.delete(problemId)
+        return next
+      })
+    }
+  }, [solvedProblems, authFetch])
 
   // ── Displayed problems (center) ───────────────────────────────────────────
   const displayedProblems = useMemo(() => {
