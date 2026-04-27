@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import Editor from '@monaco-editor/react'
 import { ArrowLeft, Play, Send, X, Loader2, CheckCircle2, XCircle, ChevronDown, ChevronRight } from 'lucide-react'
 import { problems, type Problem } from '@/data/problems-data'
 import { categoryColors } from '@/lib/mindmap-layout'
+import { useAuth } from '@/contexts/AuthContext'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ interface Submission {
   problemId: string
   language: Language
   code: string
-  timestamp: number
+  timestamp: string   // ISO string from server, or Date.toISOString() for local
   verdict: Verdict
   score?: number
   max_score?: number
@@ -60,8 +61,6 @@ interface Submission {
 }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
-
-const STORAGE_KEY = 'dl-problem-submissions'
 
 const DIFFICULTY_COLORS: Record<Problem['difficulty'], string> = {
   Easy: 'bg-green-100 text-green-700',
@@ -124,20 +123,8 @@ const MOCK_OUTPUT: Record<string, string> = {
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-function loadSubmissions(): Submission[] {
-  try {
-    return JSON.parse(localStorage.getItem(STORAGE_KEY) ?? '[]')
-  } catch {
-    return []
-  }
-}
-
-function saveSubmissions(subs: Submission[]) {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(subs))
-}
-
-function formatTimestamp(ts: number): string {
-  return new Date(ts).toLocaleString(undefined, {
+function formatTimestamp(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, {
     month: 'short',
     day: 'numeric',
     hour: '2-digit',
@@ -145,10 +132,12 @@ function formatTimestamp(ts: number): string {
   })
 }
 
-async function apiRun(problemId: string, code: string, language: string): Promise<RunResponse> {
+async function apiRun(problemId: string, code: string, language: string, token: string | null): Promise<RunResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch('/api/run', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ problem_id: problemId, code, language }),
   })
   if (!res.ok) {
@@ -158,10 +147,13 @@ async function apiRun(problemId: string, code: string, language: string): Promis
   return res.json()
 }
 
-async function apiSubmit(problemId: string, code: string, language: string): Promise<SubmitResponse> {
+async function apiSubmit(problemId: string, code: string, language: string, token: string | null): Promise<SubmitResponse> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  if (token) headers['Authorization'] = `Bearer ${token}`
   const res = await fetch('/api/submit', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
+    credentials: 'include',
     body: JSON.stringify({ problem_id: problemId, code, language }),
   })
   if (!res.ok) {
@@ -169,6 +161,25 @@ async function apiSubmit(problemId: string, code: string, language: string): Pro
     throw new Error(err.detail ?? `Server error ${res.status}`)
   }
   return res.json()
+}
+
+// Map server submission row to local Submission shape
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function mapServerSubmission(row: any): Submission {
+  return {
+    id: row.id,
+    problemId: row.problem_id,
+    language: row.language as Language,
+    code: row.code,
+    timestamp: row.timestamp,
+    verdict: row.verdict as Verdict,
+    score: row.score ?? undefined,
+    max_score: row.max_score ?? undefined,
+    passed: row.passed,
+    total: row.total,
+    execution_time_ms: row.execution_time_ms,
+    breakdown: typeof row.breakdown === 'string' ? JSON.parse(row.breakdown) : row.breakdown,
+  }
 }
 
 // ─── Output panel state ───────────────────────────────────────────────────────
@@ -340,6 +351,7 @@ function OutputPanel({
 
 export default function ProblemSolvingPage() {
   const { id } = useParams<{ id: string }>()
+  const { token, authFetch } = useAuth()
   const problem = problems.find((p) => p.id === id)
 
   const [activeTab, setActiveTab] = useState<TabId>('description')
@@ -348,13 +360,28 @@ export default function ProblemSolvingPage() {
   const [runState, setRunState] = useState<RunState>('idle')
   const [showOutput, setShowOutput] = useState(false)
   const [output, setOutput] = useState<OutputState>({ mode: 'mock' })
-  const [submissions, setSubmissions] = useState<Submission[]>(loadSubmissions)
+  const [submissions, setSubmissions] = useState<Submission[]>([])
 
   const accentColor = problem ? (categoryColors[problem.categoryKey] ?? '#6b7280') : '#6b7280'
 
+  const loadServerSubmissions = useCallback(async () => {
+    if (!id) return
+    try {
+      const res = await authFetch(`/api/users/me/submissions?problem_id=${id}&limit=50`)
+      if (res.ok) {
+        const rows = await res.json()
+        setSubmissions(rows.map(mapServerSubmission))
+      }
+    } catch {}
+  }, [id, authFetch])
+
+  useEffect(() => {
+    loadServerSubmissions()
+  }, [loadServerSubmissions])
+
   const problemSubmissions = submissions
     .filter((s) => s.problemId === id)
-    .sort((a, b) => b.timestamp - a.timestamp)
+    .sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
 
   function handleLanguageChange(lang: Language) {
     if (code !== STARTER_CODE[language]) {
@@ -371,11 +398,10 @@ export default function ProblemSolvingPage() {
     setOutput({ mode: 'run' })
 
     try {
-      const result = await apiRun(problem.id, code, language)
+      const result = await apiRun(problem.id, code, language, token)
       setOutput({ mode: 'run', runResult: result })
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
-      // 404 means no evaluator set up yet — fall back to mock
       if (msg.includes('404') || msg.toLowerCase().includes('not yet')) {
         setOutput({
           mode: 'mock',
@@ -397,48 +423,30 @@ export default function ProblemSolvingPage() {
     setActiveTab('submissions')
 
     try {
-      const result = await apiSubmit(problem.id, code, language)
+      const result = await apiSubmit(problem.id, code, language, token)
       setOutput({ mode: 'submit', submitResult: result })
-
-      const sub: Submission = {
-        id: `sub-${Date.now()}`,
-        problemId: problem.id,
-        language,
-        code,
-        timestamp: Date.now(),
-        verdict: result.verdict,
-        score: result.score,
-        max_score: result.max_score,
-        passed: result.passed,
-        total: result.total,
-        execution_time_ms: result.execution_time_ms,
-        breakdown: result.breakdown,
-      }
-      const updated = [sub, ...submissions]
-      setSubmissions(updated)
-      saveSubmissions(updated)
+      // Server has persisted the submission; reload from server
+      await loadServerSubmissions()
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err)
       if (msg.includes('404') || msg.toLowerCase().includes('not yet')) {
-        // Fallback: mock accepted submission
         setOutput({
           mode: 'mock',
           mockText: MOCK_OUTPUT[problem.categoryKey] ?? '(no output)',
         })
+        // Optimistic local submission for problems without an evaluator
         const sub: Submission = {
-          id: `sub-${Date.now()}`,
+          id: `local-${Date.now()}`,
           problemId: problem.id,
           language,
           code,
-          timestamp: Date.now(),
+          timestamp: new Date().toISOString(),
           verdict: 'Accepted',
           passed: 0,
           total: 0,
           execution_time_ms: 0,
         }
-        const updated = [sub, ...submissions]
-        setSubmissions(updated)
-        saveSubmissions(updated)
+        setSubmissions(prev => [sub, ...prev])
       } else {
         setOutput({ mode: 'submit', error: msg })
       }
@@ -676,7 +684,7 @@ function SubmissionsTab({ submissions }: { submissions: Submission[] }) {
                 </span>
               )}
             </div>
-            <span className="text-xs text-gray-400">{formatTimestamp(sub.timestamp)}</span>
+            <span className="text-xs text-gray-400">{formatTimestamp(sub.timestamp as string)}</span>
           </div>
           <div className="flex items-center gap-3 text-xs text-gray-500">
             <span>{LANGUAGE_LABELS[sub.language] ?? sub.language}</span>
